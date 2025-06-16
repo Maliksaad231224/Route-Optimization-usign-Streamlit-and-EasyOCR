@@ -289,8 +289,15 @@ def main():
                 for uploaded_file in uploaded_files:
                     image_bytes = uploaded_file.read()
                     addresses = process_image(image_bytes)
-                    if addresses!="LIST" and addresses[0] != "No addresses detected":
-                        all_addresses.extend(addresses)
+                    valid_addresses = [
+                        addr for addr in addresses 
+                        if addr != "No addresses detected" 
+                        and "LIST" not in addr.upper()
+                        and "Error processing image" not in addr
+                        ]
+            
+                    if valid_addresses:
+                        all_addresses.extend(valid_addresses)
                 
                 if all_addresses:
                     st.session_state.addresses = all_addresses
