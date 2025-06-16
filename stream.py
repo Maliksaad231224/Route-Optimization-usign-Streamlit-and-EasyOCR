@@ -289,7 +289,7 @@ def main():
                 for uploaded_file in uploaded_files:
                     image_bytes = uploaded_file.read()
                     addresses = process_image(image_bytes)
-                    if addresses and addresses[0] != "No addresses detected":
+                    if addresses!="LIST" and addresses[0] != "No addresses detected":
                         all_addresses.extend(addresses)
                 
                 if all_addresses:
