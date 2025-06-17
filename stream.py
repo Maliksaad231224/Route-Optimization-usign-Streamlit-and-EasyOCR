@@ -36,52 +36,25 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-import os
-import os
-import easyocr
-import streamlit as st
-import requests
-import zipfile
-import io
 
+# Initialize EasyOCR reader in a Streamlit-friendly way
 @st.cache_resource
 def init_ocr_reader():
     try:
-        # Directory to store models (use `/tmp/` for Streamlit Sharing)
-        model_dir = "/tmp/easyocr_models"  # Works on Streamlit Cloud
-        os.makedirs(model_dir, exist_ok=True)
-
-        # Required model files
-        models = {
-            "craft_mlt_25k.pth": "https://github.com/JaidedAI/EasyOCR/releases/download/v1.3/craft_mlt_25k.zip",
-            "english_g2.pth": "https://github.com/JaidedAI/EasyOCR/releases/download/v1.3/english_g2.zip",
-        }
-
-        # Download missing models
-        for model_name, model_url in models.items():
-            model_path = os.path.join(model_dir, model_name)
-            if not os.path.exists(model_path):
-                st.warning(f"⏳ Downloading {model_name}... (This happens once per session)")
-                try:
-                    # Download ZIP & extract
-                    response = requests.get(model_url)
-                    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
-                        zip_ref.extractall(model_dir)
-                    st.success(f"✅ Downloaded {model_name}")
-                except Exception as e:
-                    st.error(f"❌ Failed to download {model_name}: {e}")
-                    return None
-
-        # Initialize EasyOCR
+        # Initialize with the lightest settings
         return easyocr.Reader(
-            ["en"],
+            ['en'], 
             gpu=False,
-            model_storage_directory=model_dir,
-            download_enabled=False,  # Disable auto-downloads (we handle it)
+            model_storage_directory='easyocr_models',
+            download_enabled=True
         )
     except Exception as e:
-        st.error(f"🔥 EasyOCR initialization failed: {e}")
-        return None# Modified init_config function
+        logger.error(f"Failed to initialize EasyOCR: {str(e)}")
+        return None
+
+reader = init_ocr_reader()
+
+# Modified init_config function
 @st.cache_resource
 def init_config():
     config = {
@@ -316,15 +289,8 @@ def main():
                 for uploaded_file in uploaded_files:
                     image_bytes = uploaded_file.read()
                     addresses = process_image(image_bytes)
-                    valid_addresses = [
-                        addr for addr in addresses 
-                        if addr != "No addresses detected" 
-                        and "LIST" not in addr.upper()
-                        and "Error processing image" not in addr
-                        ]
-            
-                    if valid_addresses:
-                        all_addresses.extend(valid_addresses)
+                    if addresses and addresses[0] != "No addresses detected":
+                        all_addresses.extend(addresses)
                 
                 if all_addresses:
                     st.session_state.addresses = all_addresses
