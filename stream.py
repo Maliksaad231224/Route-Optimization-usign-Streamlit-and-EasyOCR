@@ -37,28 +37,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 import os
-# Initialize EasyOCR reader in a Streamlit-friendly way
+import os
+import easyocr
+import streamlit as st
+import requests
+import zipfile
+import io
+
 @st.cache_resource
 def init_ocr_reader():
     try:
-        # Create a persistent directory for models
-        model_dir = os.path.join(os.getcwd(), 'easyocr_models')
+        # Directory to store models (use `/tmp/` for Streamlit Sharing)
+        model_dir = "/tmp/easyocr_models"  # Works on Streamlit Cloud
         os.makedirs(model_dir, exist_ok=True)
-        
-        # Initialize with explicit paths
+
+        # Required model files
+        models = {
+            "craft_mlt_25k.pth": "https://github.com/JaidedAI/EasyOCR/releases/download/v1.3/craft_mlt_25k.zip",
+            "english_g2.pth": "https://github.com/JaidedAI/EasyOCR/releases/download/v1.3/english_g2.zip",
+        }
+
+        # Download missing models
+        for model_name, model_url in models.items():
+            model_path = os.path.join(model_dir, model_name)
+            if not os.path.exists(model_path):
+                st.warning(f"⏳ Downloading {model_name}... (This happens once per session)")
+                try:
+                    # Download ZIP & extract
+                    response = requests.get(model_url)
+                    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+                        zip_ref.extractall(model_dir)
+                    st.success(f"✅ Downloaded {model_name}")
+                except Exception as e:
+                    st.error(f"❌ Failed to download {model_name}: {e}")
+                    return None
+
+        # Initialize EasyOCR
         return easyocr.Reader(
-            ['en'], 
+            ["en"],
             gpu=False,
             model_storage_directory=model_dir,
-            download_enabled=False  # Disable automatic downloads
+            download_enabled=False,  # Disable auto-downloads (we handle it)
         )
     except Exception as e:
-        st.error(f"Failed to initialize EasyOCR: {str(e)}")
-        return None
-
-reader = init_ocr_reader()
-
-# Modified init_config function
+        st.error(f"🔥 EasyOCR initialization failed: {e}")
+        return None# Modified init_config function
 @st.cache_resource
 def init_config():
     config = {
