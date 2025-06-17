@@ -36,20 +36,24 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
+import os
 # Initialize EasyOCR reader in a Streamlit-friendly way
 @st.cache_resource
 def init_ocr_reader():
     try:
-        # Initialize with the lightest settings
+        # Create a persistent directory for models
+        model_dir = os.path.join(os.getcwd(), 'easyocr_models')
+        os.makedirs(model_dir, exist_ok=True)
+        
+        # Initialize with explicit paths
         return easyocr.Reader(
             ['en'], 
             gpu=False,
-            model_storage_directory='easyocr_models',
-            download_enabled=True
+            model_storage_directory=model_dir,
+            download_enabled=False  # Disable automatic downloads
         )
     except Exception as e:
-        logger.error(f"Failed to initialize EasyOCR: {str(e)}")
+        st.error(f"Failed to initialize EasyOCR: {str(e)}")
         return None
 
 reader = init_ocr_reader()
